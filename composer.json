@@ -3,9 +3,20 @@
   "description": "A Kirby plugin for routing and managing multiple domains in a single Kirby installation.",
   "version": "1.0.0",
   "license": "MIT",
+  "type": "kirby-plugin",
+  "keywords": [
+        "kirby",
+        "kirby-plugin",
+        "multidomain",
+        "routing"
+    ],
   "require": {
-    "php": ">=8.1"
+    "php": ">=8.1",
+    "getkirby/composer-installer": "^1.1"
   },
+  "require-dev": {
+        "getkirby/cms": "^3"
+    },
   "authors": [
       {
           "name": "Gerrit van Aaken",

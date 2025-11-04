@@ -12,15 +12,28 @@ The plugin automatically handles routing for multiple domains and replaces URLs 
    - **Internal links** (same folder): Converted to relative paths
    - **External links** (different folder): Receive the full absolute URL
 
-## Installation
+## Installation (1/3)
 
-1. Copy the plugin folder to `site/plugins/multidomain-router/`
-2. Configure your domains (see configuration methods below)
-3. Create one top-level content folder for each desired domain
+### via composer
 
-## Domain Configuration
+To install the Multidomain Router plugin via composer, run:
 
-There are two methods to configure your domains. **Method 1 (Config File)** is recommended and takes precedence over Method 2.
+```bash
+composer require praegnanz/kirby-multidomain-router
+```
+
+Make sure you are in the root directory of your Kirby project when running this command.
+
+After installation, the plugin will be available at `site/plugins/multidomain-router/`. You can then continue with the configuration as described below.
+
+
+### manually
+
+Download and copy the plugin folder into `site/plugins/`.
+
+## Domain Configuration (2/3)
+
+There are two methods to configure your domains:
 
 ### Method 1: Config File (Recommended)
 
@@ -32,14 +45,14 @@ Add the domain configuration directly in your `site/config/config.php`:
 return [
     'praegnanz.multidomain-router.sites' => [
         [
-            'domain' => 'https://example-domain-one.com', // with protocol and no trailing slash
-            'folder' => 'example-domain-one', // no slashes
-            'error' => 'example-domain-one/error' // optional: path to custom error page
+            'domain' => 'https://example-domain-one.com',
+            'folder' => 'example-domain-one',
+            'error' => 'example-domain-one/error' //optional
         ],
         [
             'domain' => 'https://example-domain-two.com',
             'folder' => 'example-domain-two',
-            'error' => 'example-domain-two/error'
+            'error' => 'example-domain-two/error' //optional
         ]
     ]
 ];
@@ -82,59 +95,54 @@ tabs:
 
 **Note:** If domains are configured in the config file (Method 1), the Panel configuration will be ignored.
 
+## Folder creation (3)
+
+To create the required content folders for each domain, follow these steps:
+
+1. **Navigate to your site's `content` directory** (usually `site/content` in your Kirby installation).
+
+2. **Create a new folder for each domain.**
+   - The folder name must exactly match the `folder` value you set in your multidomain configuration. 
+   - For example:
+     ```
+     site/content/example-domain-one/
+     site/content/example-domain-two/
+     ```
+
+3. **Add content to each folder as usual.**
+   - Each folder will represent the homepage and pages for that particular domain.
+   - The typical structure inside a folder:
+     ```
+     site/content/example-domain-one/home.txt
+     site/content/example-domain-one/1_rooms/rooms.txt
+     site/content/example-domain-two/1_rooms/1_penthouse/room.txt
+     ```
+   - Add your regular Kirby pages (folders ending in `.txt`/subfolders) inside the domain folder as you would for a single-site setup.
+
+**Tips:**
+- If a domain has a custom error page, make sure to create the corresponding error page in the respective folder, e.g.:
+  ```
+  site/content/example-domain-one/error/default.txt
+  site/content/example-domain-two/error/default.txt
+  ```
+- Folder names and structure should remain consistent with your configuration to ensure correct routing.
+
+That's it! Each domain will serve content from its respective folder.
+
+
+
 ## Examples
 
-### On hotel-kirby.de
+### Domain: https://hotel-kirby.de
 
 - `/hotel-kirby/room` → `/room` (same folder = relative)
 - `/restaurant-kirby/lunch` → `https://restaurant-kirby.de/lunch` (different folder = absolute)
 - `https://hotel-kirby.de/hotel-kirby/room` → `/room` (same folder = relative)
 
-### On restaurant-kirby.de
+### Domain: https://restaurant-kirby.de
 
 - `/restaurant-kirby/lunch` → `/lunch` (same folder = relative)
 - `/hotel-kirby/room` → `https://hotel-kirby.de/room` (different folder = absolute)
-
-## Technical Details
-
-The plugin registers a global route with the pattern `(:all)` that intercepts all requests. It uses:
-
-- **Config File or Site Settings**: Multidomain configuration from `config.php` (preferred) or `site/content/site.txt` (fallback)
-- **Configuration Precedence**: Config file takes priority over Panel settings
-- **Global Routing**: Intercepts all HTTP requests before standard Kirby routing
-- **Output Buffering** to capture the rendered HTML
-- **Regex Pattern Matching** for URL replacement
-- **String Replacement** for path replacement
-
-### Data Storage
-
-**Method 1 (Config File)**: Configuration is stored in `site/config/config.php`:
-
-```php
-'praegnanz.multidomain-router.sites' => [
-    [
-        'domain' => 'https://example-domain-one.com',
-        'folder' => 'example-domain-one',
-        'error' => 'example-domain-one/error'
-    ]
-]
-```
-
-**Method 2 (Panel)**: Configuration is stored as a Structure Field in `site.txt`:
-
-```yaml
-Multidomains:
-- 
-  domain: https://example-domain-one.com
-  folder: example-domain-one
-  error:
-    - page://mgpdvfp7ddx9akic
-- 
-  domain: https://example-domain-two.com
-  folder: example-domain-two
-  error:
-    - page://mgpdvfp7ddx9akic
-```
 
 ## License
 
