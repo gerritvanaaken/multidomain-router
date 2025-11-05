@@ -7,10 +7,9 @@ A Kirby plugin for routing and managing multiple domains within a single Kirby i
 The plugin automatically handles routing for multiple domains and replaces URLs in the rendered HTML output:
 
 1. **Routing**: Intercepts all requests and maps them to the correct content folder based on the domain
-2. **Page Mapping**: URLs are mapped to the correct content folder (e.g. `/example-domain-one/`)
-3. **URL Replacement**: All URLs are intelligently replaced in the rendered output:
-   - **Internal links** (same folder): Converted to relative paths
-   - **External links** (different folder): Receive the full absolute URL
+3. **URL Replacement**: In the rendered output, all URLs are intelligently trimmed:
+   - **links within current domain** (same folder): Converted to relative paths
+   - **links to sibling domain** (different folder): Converted to the full absolute URLs
 
 ## Installation (1/3)
 
@@ -19,7 +18,7 @@ The plugin automatically handles routing for multiple domains and replaces URLs 
 To install the Multidomain Router plugin via composer, run:
 
 ```bash
-composer require praegnanz/kirby-multidomain-router
+composer require gerritvanaaken/multidomain-router
 ```
 
 Make sure you are in the root directory of your Kirby project when running this command.
@@ -29,13 +28,13 @@ After installation, the plugin will be available at `site/plugins/multidomain-ro
 
 ### manually
 
-Download and copy the plugin folder into `site/plugins/`.
+Download and copy the full plugin folder into `site/plugins/`.
 
 ## Domain Configuration (2/3)
 
 There are two methods to configure your domains:
 
-### Method 1: Config File (Recommended)
+### Method A: Config File (Recommended)
 
 Add the domain configuration directly in your `site/config/config.php`:
 
@@ -63,7 +62,7 @@ return [
 - `folder` (required): Content folder name, without any slashes
 - `error` (optional): Path to custom error page (e.g. `'folder-name/error'`)
 
-### Method 2: Panel Configuration (Fallback)
+### Method B: Panel Configuration (Fallback)
 
 If you prefer to configure domains through the Panel:
 
@@ -93,7 +92,7 @@ tabs:
    - Optionally select an **error page**
    - Don't forget to save! ✓
 
-**Note:** If domains are configured in the config file (Method 1), the Panel configuration will be ignored.
+**Note:** If domains are configured in the config file (Method A), the Panel configuration will be ignored.
 
 ## Folder creation (3)
 
@@ -131,18 +130,19 @@ That's it! Each domain will serve content from its respective folder.
 
 
 
-## Examples
+## Examples for URL replacements
 
-### Domain: https://hotel-kirby.de
+### On https://hotel-kirby.de
 
-- `/hotel-kirby/room` → `/room` (same folder = relative)
-- `/restaurant-kirby/lunch` → `https://restaurant-kirby.de/lunch` (different folder = absolute)
-- `https://hotel-kirby.de/hotel-kirby/room` → `/room` (same folder = relative)
+- `/hotel-kirby/room` → `/room`
+- `/restaurant-kirby/lunch` → `https://restaurant-kirby.de/lunch`
+- `https://hotel-kirby.de/hotel-kirby/room` → `/room`
 
-### Domain: https://restaurant-kirby.de
+### On https://restaurant-kirby.de
 
-- `/restaurant-kirby/lunch` → `/lunch` (same folder = relative)
-- `/hotel-kirby/room` → `https://hotel-kirby.de/room` (different folder = absolute)
+- `/restaurant-kirby/lunch` → `/lunch`
+- `/hotel-kirby/room` → `https://hotel-kirby.de/room`
+- `https://restaurant-kirby.de/restaurant-kirby/lunch` → `/lunch`
 
 ## License
 

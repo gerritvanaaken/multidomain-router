@@ -50,7 +50,7 @@ function getMultiDomains(): array
  */
 function replaceMultidomainUrls(string $output, string $currentFolder, array $sites): string
 {
-    // Iterate through all domains and add the appropriate folder prefix to the URL, load the page internally and render it
+    // Iterate through all domains and replace the URLs in the HTML output
     foreach ($sites as $targetDomain) {
         $targetFolder = $targetDomain['folder'];
         
@@ -61,7 +61,7 @@ function replaceMultidomainUrls(string $output, string $currentFolder, array $si
         $replacementUrl = $isCurrentFolder ? '' : $targetDomain['domain'];
         
         // 1. Replace full URLs with path_prefix
-        // e.g. https://example.com/hotel-nepomuk/page
+        // e.g. https://example.com/example-domain-one/page
         $pattern = '#(https?://[^/]+)/' . preg_quote($targetFolder, '#') . '/([^"\'\s]*)#i';
         $output = preg_replace(
             $pattern,
@@ -141,7 +141,6 @@ Kirby::plugin('gerritvanaaken/multidomain-router', [
             'action'  => function ($path = null) {
                 $host = $_SERVER['HTTP_HOST'] ?? '';
                 $sites = getMultiDomains();
-
                 $pathStart = explode('/', $path)[0];
                 
                 // Case 1: Hard Redirect, when visible url path starts with a folder from plugin configuration
@@ -162,11 +161,9 @@ Kirby::plugin('gerritvanaaken/multidomain-router', [
                     }
                 }
 
-            
                 // Case 2: Visible URL does not contain an internal folder name from plugin configuration, so silently fetch the correct page internally and render it, not changing the visible URL
 
                 foreach ($sites as $site) {
-
                     
                     if (strpos($host, $site['folder']) !== false) {
 
@@ -176,18 +173,15 @@ Kirby::plugin('gerritvanaaken/multidomain-router', [
                             $path = preg_replace('/' . preg_quote($site['folder'], '/') . '/', '', $path, 1);
                         }
 
-                        
-
                         $page = site()->find($site['folder'] . '/' . $path);
-
                         
                         if (!$page) {
                             // Show 404 page
                             header('Status: 404 Not Found');
                             if (isset($site['error'])) {
-                                return site()->visit($site['folder'] . '/' . $site['error']->slug());
+                                $page = site()->find($site['folder'] . '/' . $site['error']->slug());
                             } else {
-                                return site()->visit($site['folder'] . '/error');
+                                $page = site()->find($site['folder'] . '/error');
                             }
                         }
                         
@@ -198,9 +192,6 @@ Kirby::plugin('gerritvanaaken/multidomain-router', [
                         ob_start();
                         echo $renderpage->render();
                         $output = ob_get_clean();
-
-                        
-
                         $output = replaceMultidomainUrls($output, $site['folder'], $sites);
                         
                         return new Response($output, 'text/html');
