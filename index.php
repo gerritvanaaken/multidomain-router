@@ -71,11 +71,12 @@ function replaceMultidomainUrls(string $output, string $currentFolder, array $si
         
         // 2. Replace paths starting with /path_prefix
         // instead of using str_replace, use regex and replace only those strings that are not part of a full URL
-        $output = preg_replace(
-            '#' . preg_quote($targetFolder, '#') . '/([^"\'\s]*)#i',
-            $replacementUrl . '/$1',
-            $output
-        );
+            // This regex skips replacements if preceded by /media/
+            $output = preg_replace(
+                '#(?<!/media/pages/)' . preg_quote($targetFolder, '#') . '/([^"\'\s]*)#i',
+                $replacementUrl . '/$1',
+                $output
+            );
     }
     
     return $output;
