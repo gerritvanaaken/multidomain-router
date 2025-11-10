@@ -41,6 +41,21 @@ function getMultiDomains(): array
 }
 
 /**
+ * Gets the folder name from the domain configuration based on the current host
+ * 
+ * @param array $sites Array with domain configurations
+ * @param string $host The host name
+ * @return string The folder name
+ */
+function getRequestFolder($sites, $host) {
+    foreach($sites as $site) {
+        if (strpos($site['domain'], $host) !== false) {
+            return $site['folder'];
+        }
+    }
+}
+
+/**
  * Replaces URLs in HTML output based on domain configurations
  * 
  * @param string $output The HTML output
@@ -142,7 +157,9 @@ Kirby::plugin('gerritvanaaken/multidomain-router', [
             'action'  => function ($path = null) {
                 $host = $_SERVER['HTTP_HOST'] ?? '';
                 $sites = getMultiDomains();
+                $hostfolder = getRequestFolder($sites, $host);
                 $pathStart = explode('/', $path)[0];
+
                 
                 // Case 1: Hard Redirect, when visible url path starts with a folder from plugin configuration
                 foreach ($sites as $site) {
@@ -165,8 +182,9 @@ Kirby::plugin('gerritvanaaken/multidomain-router', [
                 // Case 2: Visible URL does not contain an internal folder name from plugin configuration, so silently fetch the correct page internally and render it, not changing the visible URL
 
                 foreach ($sites as $site) {
+
                     
-                    if (strpos($host, $site['folder']) !== false) {
+                    if (strpos($hostfolder, $site['folder']) !== false) {
 
                         $path = $path ?: '';
 
