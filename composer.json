@@ -1,7 +1,7 @@
 {
 	"name": "gerritvanaaken/multidomain-router",
 	"description": "A Kirby plugin for routing and managing multiple domains in a single Kirby installation.",
-	"version": "1.0.4",
+	"version": "1.0.5",
 	"license": "MIT",
 	"type": "kirby-plugin",
 	"keywords": [
@@ -12,10 +12,11 @@
 	],
 	"require": {
 		"php": ">=8.1",
-		"getkirby/composer-installer": "^1.1"
+		"getkirby/composer-installer": "^1.1",
+		"getkirby/cms": "^4.0 || ^5.0"
 	},
 	"require-dev": {
-		"getkirby/cms": "^4"
+		"getkirby/cms": "^4.0 || ^5.0"
 	},
 	"authors": [
 		{
