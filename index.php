@@ -1,6 +1,6 @@
 <?php
-
 use Kirby\Cms\App as Kirby;
+use Kirby\Cms\Ingredients;
 use Kirby\Cms\Language;
 use Kirby\Http\Response;
 
@@ -12,50 +12,57 @@ function getMultiDomains(): array
 {
     // Method 1 (Preferred): Check Kirby config file
     $configSites = option('praegnanz.multidomain-router.sites', null);
-    
-    if ($configSites !== null && is_array($configSites) && !empty($configSites)) {
+
+    if (
+        $configSites !== null &&
+        is_array($configSites) &&
+        !empty($configSites)
+    ) {
         // Process config file domains
-        return array_map(function($site) {
+        return array_map(function ($site) {
             return [
                 'folder' => $site['folder'] ?? '',
                 'domain' => $site['domain'] ?? '',
-                'error' => isset($site['error']) ? site()->find($site['error']) : null
+                'error' => isset($site['error'])
+                    ? site()->find($site['error'])
+                    : null,
             ];
         }, $configSites);
     }
-    
-    // Method 2 (Fallback): Read from Site Settings (Panel)
+
+    // Method 2 (Legacy Fallback): Read from Site Settings (Panel)
     $sites = site()->multidomains()->toStructure();
-    
+
     if ($sites && $sites->isNotEmpty()) {
         // Convert Structure to array format
-        return $sites->toArray(function($site) {
+        return $sites->toArray(function ($site) {
             return [
                 'folder' => $site->folder()->value(),
                 'domain' => $site->domain()->value(),
-                'error' => $site->error()->toPage()
+                'error' => $site->error()->toPage(),
             ];
         });
     }
-    
+
     return [];
 }
 
 /**
  * Gets the folder name from the domain configuration based on the current host
- * 
+ *
  * @param array $sites Array with domain configurations
  * @param string $host The host name
  * @return string|null The folder name or null if no match
  */
-function getRequestFolder($sites, $host) {
+function getRequestFolder($sites, $host)
+{
     // Normalize host from request (strip optional port)
     $requestHost = strtolower(trim($host));
     if (strpos($requestHost, ':') !== false) {
         $requestHost = explode(':', $requestHost)[0];
     }
 
-    foreach($sites as $site) {
+    foreach ($sites as $site) {
         if (empty($site['domain']) === true) {
             continue;
         }
@@ -63,10 +70,14 @@ function getRequestFolder($sites, $host) {
         $configuredHost = parse_url($site['domain'], PHP_URL_HOST);
         if ($configuredHost === null || $configuredHost === false) {
             // Fallback for malformed configuration without scheme
-            $configuredHost = preg_replace('#^https?://#i', '', $site['domain']);
+            $configuredHost = preg_replace(
+                '#^https?://#i',
+                '',
+                $site['domain'],
+            );
             $configuredHost = explode('/', $configuredHost)[0];
         }
-        $configuredHost = strtolower(trim((string)$configuredHost));
+        $configuredHost = strtolower(trim((string) $configuredHost));
 
         if ($configuredHost !== '' && $configuredHost === $requestHost) {
             return $site['folder'];
@@ -100,7 +111,7 @@ function getMultidomainLanguagePrefixes(): array
 
     // Longest prefixes first to support multi-segment prefixes
     // like "lang/en" before "lang".
-    uksort($prefixes, fn ($a, $b) => strlen($b) <=> strlen($a));
+    uksort($prefixes, fn($a, $b) => strlen($b) <=> strlen($a));
 
     return $prefixes;
 }
@@ -116,7 +127,7 @@ function getMultidomainLangPattern(): string
         return '';
     }
 
-    $escaped = array_map(fn ($prefix) => preg_quote($prefix, '#'), $prefixes);
+    $escaped = array_map(fn($prefix) => preg_quote($prefix, '#'), $prefixes);
     return '(?:(' . implode('|', $escaped) . ')/)?';
 }
 
@@ -150,7 +161,7 @@ function resolveMultidomainLanguageFromPath(string $path): array
     $result = [
         'path' => $path,
         'languageCode' => null,
-        'languagePrefix' => ''
+        'languagePrefix' => '',
     ];
 
     if (!$kirby->multilang()) {
@@ -197,14 +208,17 @@ function applyMultidomainLanguageContext(?string $languageCode): void
  * Replaces URLs in HTML output based on domain configurations.
  * Supports Kirby multi-language URLs: the language prefix ("/en/...") is preserved
  * while the internal folder name ("/hotel-nepomuk/") is stripped or swapped.
- * 
+ *
  * @param string $output The HTML output
  * @param string $currentFolder The current folder (e.g. 'hotel-nepomuk')
  * @param array $sites Array with domain configurations
  * @return string The modified HTML output
  */
-function replaceMultidomainUrls(string $output, string $currentFolder, array $sites): string
-{
+function replaceMultidomainUrls(
+    string $output,
+    string $currentFolder,
+    array $sites,
+): string {
     $langGroup = getMultidomainLangPattern();
     $hasLang = $langGroup !== '';
 
@@ -215,25 +229,33 @@ function replaceMultidomainUrls(string $output, string $currentFolder, array $si
         }
 
         // Check if it's the current folder or a different one
-        $isCurrentFolder = ($targetFolder === $currentFolder);
+        $isCurrentFolder = $targetFolder === $currentFolder;
 
         // Target URL base: If current folder -> relative paths, otherwise absolute URL
         $replacementBase = $isCurrentFolder ? '' : $targetDomain['domain'];
 
         // 1. Replace full URLs with optional language prefix
         //    e.g. https://example.com/[lang/]example-domain-one/page
-        $pattern1 = '#(https?://[^/]+)/' . $langGroup . preg_quote($targetFolder, '#') . '/([^"\'\s]*)#i';
-        $output = preg_replace_callback($pattern1, function ($m) use ($replacementBase, $hasLang) {
-            if ($hasLang) {
-                $lang = $m[2] ?? '';
-                $rest = $m[3] ?? '';
-            } else {
-                $lang = '';
-                $rest = $m[2] ?? '';
-            }
-            $langPart = $lang !== '' ? '/' . $lang : '';
-            return $replacementBase . $langPart . '/' . $rest;
-        }, $output);
+        $pattern1 =
+            '#(https?://[^/]+)/' .
+            $langGroup .
+            preg_quote($targetFolder, '#') .
+            '/([^"\'\s]*)#i';
+        $output = preg_replace_callback(
+            $pattern1,
+            function ($m) use ($replacementBase, $hasLang) {
+                if ($hasLang) {
+                    $lang = $m[2] ?? '';
+                    $rest = $m[3] ?? '';
+                } else {
+                    $lang = '';
+                    $rest = $m[2] ?? '';
+                }
+                $langPart = $lang !== '' ? '/' . $lang : '';
+                return $replacementBase . $langPart . '/' . $rest;
+            },
+            $output,
+        );
 
         // 2. Replace absolute paths with optional language prefix
         //    e.g. /[lang/]example-domain-one/page
@@ -245,83 +267,69 @@ function replaceMultidomainUrls(string $output, string $currentFolder, array $si
         // /media/pages/<folder>/... because Kirby stores generated thumbs there.
         // The previous negative lookbehind with "/media/pages/" was too strict and
         // still matched in some cases; "/media/pages" is the correct anchor.
-        $pattern2 = '#(?<!/media/pages)/' . $langGroup . preg_quote($targetFolder, '#') . '/([^"\'\s]*)#i';
-        $output = preg_replace_callback($pattern2, function ($m) use ($replacementBase, $hasLang) {
-            if ($hasLang) {
-                $lang = $m[1] ?? '';
-                $rest = $m[2] ?? '';
-            } else {
-                $lang = '';
-                $rest = $m[1] ?? '';
-            }
-            $langPart = $lang !== '' ? '/' . $lang : '';
-            return $replacementBase . $langPart . '/' . $rest;
-        }, $output);
+        $pattern2 =
+            '#(?<!/media/pages)/' .
+            $langGroup .
+            preg_quote($targetFolder, '#') .
+            '/([^"\'\s]*)#i';
+        $output = preg_replace_callback(
+            $pattern2,
+            function ($m) use ($replacementBase, $hasLang) {
+                if ($hasLang) {
+                    $lang = $m[1] ?? '';
+                    $rest = $m[2] ?? '';
+                } else {
+                    $lang = '';
+                    $rest = $m[1] ?? '';
+                }
+                $langPart = $lang !== '' ? '/' . $lang : '';
+                return $replacementBase . $langPart . '/' . $rest;
+            },
+            $output,
+        );
     }
 
     return $output;
 }
 
+
+/**
+ * Replace .license file internally with .folder.license file
+ * for read/write license activation and check
+ */
+
+(function () {
+    $sites = option('praegnanz.multidomain-router.sites', []);
+    if (!is_array($sites) || empty($sites)) {
+        return;
+    }
+
+    $folder = getRequestFolder($sites, $_SERVER['HTTP_HOST'] ?? '');
+    if ($folder === null || $folder === '') {
+        return;
+    }
+
+    $kirby = kirby();
+    $roots = $kirby->roots()->toArray();
+    $roots['license'] = $kirby->root('config') . '/.' . $folder . '.license';
+
+    $property = new ReflectionProperty(Kirby::class, 'roots');
+    $property->setValue($kirby, new Ingredients($roots));
+})();
+
+
+/**
+ * filter all routes and do the magic. This is hacky.
+ */
+
 Kirby::plugin('gerritvanaaken/multidomain-router', [
-    'blueprints' => [
-        'multidomain-router' => [
-            'label' => 'Multidomains',
-            'icon' => 'globe',
-            'columns' => [
-                [
-                    'width' => '2/3',
-                    'sections' => [
-                        'fields' => [
-                            'type' => 'fields',
-                            'fields' => [
-                                'multidomains' => [
-                                    'label' => 'Multidomain Configuration',
-                                    'type' => 'structure',
-                                    'fields' => [
-                                        'domain' => [
-                                            'label' => 'Domain',
-                                            'type' => 'url',
-                                            'required' => true,
-                                            'help' => 'Full URL including protocol, no trailing slash (e.g. "https://www.example-domain-one.com")',
-                                        ],
-                                        'folder' => [
-                                            'label' => 'Folder',
-                                            'type' => 'text',
-                                            'required' => true,
-                                            'help' => 'Content folder name (e.g. "example-domain-one"), without any slashes. Doesn’t have to be the same as the domain name, but it’s recommended to keep it simple.',
-                                        ],
-                                        'error' => [
-                                            'label' => 'Error Page',
-                                            'type' => 'pages',
-                                            'required' => false,
-                                            'multiple' => false,
-                                            'help' => 'individual error page slug name (e.g. "error"), leave empty to use the default Kirby 404 page',
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
-                ],
-                [
-                    'width' => '1/3',
-                    'sections' => [
-                        'info' => [
-                            'type' => 'info',
-                            'headline' => 'Information',
-                            'text' => 'This configuration controls the multi-domain routing. Each domain is assigned to a content folder.'
-                        ]
-                    ]
-                ]
-            ]
-        ]
-    ],
     'routes' => [
         [
-            'pattern'  => '(:all)',
-            'action'   => function ($path = null) {
+            'method' => 'GET|POST',
+            'pattern' => '(:all)',
+            'action' => function ($path = null) {
                 $kirby = kirby();
-                $host  = $_SERVER['HTTP_HOST'] ?? '';
+                $host = $_SERVER['HTTP_HOST'] ?? '';
                 $sites = getMultiDomains();
                 $hostfolder = getRequestFolder($sites, $host);
 
@@ -361,10 +369,20 @@ Kirby::plugin('gerritvanaaken/multidomain-router', [
                         }
 
                         // Remove the folder name from the path (only the first occurence)
-                        $path = preg_replace('/' . preg_quote($site['folder'], '/') . '/', '', $path, 1);
+                        $path = preg_replace(
+                            '/' . preg_quote($site['folder'], '/') . '/',
+                            '',
+                            $path,
+                            1,
+                        );
 
-                        header('Location: ' . $site['domain'] . $languagePrefix . $path);
-                        exit;
+                        header(
+                            'Location: ' .
+                                $site['domain'] .
+                                $languagePrefix .
+                                $path,
+                        );
+                        exit();
                     }
                 }
 
@@ -372,14 +390,25 @@ Kirby::plugin('gerritvanaaken/multidomain-router', [
                 // plugin configuration, so silently fetch the correct page internally
                 // and render it, not changing the visible URL.
                 foreach ($sites as $site) {
-                    if ($hostfolder !== null && strpos($hostfolder, $site['folder']) !== false) {
+                    if (
+                        $hostfolder !== null &&
+                        strpos($hostfolder, $site['folder']) !== false
+                    ) {
                         // Defensive: if for some reason the path still contains the folder, strip it
                         if ($pathStart === $site['folder']) {
-                            $path = preg_replace('/' . preg_quote($site['folder'], '/') . '/', '', $path, 1);
+                            $path = preg_replace(
+                                '/' . preg_quote($site['folder'], '/') . '/',
+                                '',
+                                $path,
+                                1,
+                            );
                         }
 
                         $path = trim($path, '/');
-                        $lookupPath = $path === '' ? $site['folder'] : $site['folder'] . '/' . $path;
+                        $lookupPath =
+                            $path === ''
+                                ? $site['folder']
+                                : $site['folder'] . '/' . $path;
 
                         $page = site()->find($lookupPath);
 
@@ -387,9 +416,15 @@ Kirby::plugin('gerritvanaaken/multidomain-router', [
                             // Show 404 page
                             header('Status: 404 Not Found');
                             if (!empty($site['error'])) {
-                                $page = site()->find($site['folder'] . '/' . $site['error']->slug());
+                                $page = site()->find(
+                                    $site['folder'] .
+                                        '/' .
+                                        $site['error']->slug(),
+                                );
                             } else {
-                                $page = site()->find($site['folder'] . '/error');
+                                $page = site()->find(
+                                    $site['folder'] . '/error',
+                                );
                             }
                         }
 
@@ -405,7 +440,11 @@ Kirby::plugin('gerritvanaaken/multidomain-router', [
                         ob_start();
                         echo $renderpage->render();
                         $output = ob_get_clean();
-                        $output = replaceMultidomainUrls($output, $site['folder'], $sites);
+                        $output = replaceMultidomainUrls(
+                            $output,
+                            $site['folder'],
+                            $sites,
+                        );
                         return new Response($output, 'text/html');
                     }
                 }
@@ -415,7 +454,7 @@ Kirby::plugin('gerritvanaaken/multidomain-router', [
                     return site()->visit($path ?: 'home', $languageCode);
                 }
                 return site()->visit($path ?: 'home');
-            }
-        ]
-    ]
+            },
+        ],
+    ],
 ]);
