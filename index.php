@@ -240,7 +240,7 @@ function replaceMultidomainUrls(
             '#(https?://[^/]+)/' .
             $langGroup .
             preg_quote($targetFolder, '#') .
-            '/([^"\'\s]*)#i';
+            '(?=[/?\#"\'\s<>]|$)([^"\'\s<>]*)#i';
         $output = preg_replace_callback(
             $pattern1,
             function ($m) use ($replacementBase, $hasLang) {
@@ -252,7 +252,12 @@ function replaceMultidomainUrls(
                     $rest = $m[2] ?? '';
                 }
                 $langPart = $lang !== '' ? '/' . $lang : '';
-                return $replacementBase . $langPart . '/' . $rest;
+                // Keep same-domain homepage links rooted instead of empty or query-only.
+                $base = $replacementBase . $langPart;
+                if ($base === '' && !str_starts_with($rest, '/')) {
+                    $base = '/';
+                }
+                return $base . $rest;
             },
             $output,
         );
@@ -271,7 +276,7 @@ function replaceMultidomainUrls(
             '#(?<!/media/pages)/' .
             $langGroup .
             preg_quote($targetFolder, '#') .
-            '/([^"\'\s]*)#i';
+            '(?=[/?\#"\'\s<>]|$)([^"\'\s<>]*)#i';
         $output = preg_replace_callback(
             $pattern2,
             function ($m) use ($replacementBase, $hasLang) {
@@ -283,7 +288,12 @@ function replaceMultidomainUrls(
                     $rest = $m[1] ?? '';
                 }
                 $langPart = $lang !== '' ? '/' . $lang : '';
-                return $replacementBase . $langPart . '/' . $rest;
+                // Keep same-domain homepage links rooted instead of empty or query-only.
+                $base = $replacementBase . $langPart;
+                if ($base === '' && !str_starts_with($rest, '/')) {
+                    $base = '/';
+                }
+                return $base . $rest;
             },
             $output,
         );
